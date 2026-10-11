@@ -1,0 +1,35 @@
+{
+  "objects": [
+    {
+      "id": "object_01",
+      "name": "红球",
+      "aliases": ["红色球", "红色的小球"],
+      "localization": {
+        "bbox": [120, 80, 60, 60],
+        "mask": "external://detection_module/object_01",
+        "note": "定位信息由检测跟踪模块提供,解析器只引用 ID"
+      }
+    },
+    {
+      "id": "object_02",
+      "name": "蓝球",
+      "aliases": ["蓝色球"]
+    }
+  ],
+  "regions": [
+    {
+      "id": "region_01",
+      "name": "蓝色区域",
+      "aliases": ["蓝区"],
+      "localization": {
+        "bbox": [400, 300, 200, 180],
+        "mask": "external://segmentation_module/region_01"
+      }
+    }
+  ],
+  "video": {
+    "duration_seconds": 5.0,
+    "fps": 16,
+    "frame_count": 80
+  }
+}
