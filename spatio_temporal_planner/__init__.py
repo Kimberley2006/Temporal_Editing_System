@@ -10,9 +10,11 @@ from .planner import SpatioTemporalPlanner
 from .schemas import (DEFAULT_SLOW_FACTOR, DEFAULT_SPEED_UP_FACTOR, ExecutionPlan,
                       Keyframe, PassPlan, PlanOp, RepairResolution, ScheduledItem,
                       SegmentSpec, TaskPackage, VerificationCheck)
+from .spatial import plan_path, sample_keyframes
 from .task_package import build_task_package
 
-__all__ = ["SpatioTemporalPlanner", "build_task_package", "TaskPackage", "PlanOp",
+__all__ = ["SpatioTemporalPlanner", "build_task_package", "plan_path",
+           "sample_keyframes", "TaskPackage", "PlanOp",
            "SegmentSpec", "Keyframe", "PassPlan", "ExecutionPlan", "ScheduledItem",
            "RepairResolution", "VerificationCheck",
            "DEFAULT_SLOW_FACTOR", "DEFAULT_SPEED_UP_FACTOR"]

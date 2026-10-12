@@ -1,0 +1,430 @@
+{
+  "scene": {
+    "objects": [
+      {
+        "id": "object_01",
+        "name": "行人",
+        "aliases": [],
+        "localization": {
+          "bbox": [
+            357.8,
+            182.4,
+            490.9,
+            417.6
+          ],
+          "trajectory": [
+            [
+              0.0,
+              [
+                357.8,
+                182.4,
+                490.9,
+                417.6
+              ]
+            ],
+            [
+              0.267,
+              [
+                280.1,
+                187.2,
+                449.3,
+                414.4
+              ]
+            ],
+            [
+              0.533,
+              [
+                202.5,
+                192.0,
+                407.7,
+                411.2
+              ]
+            ],
+            [
+              0.8,
+              [
+                124.8,
+                196.8,
+                366.1,
+                408.0
+              ]
+            ],
+            [
+              1.067,
+              [
+                124.8,
+                196.8,
+                366.1,
+                408.0
+              ]
+            ],
+            [
+              1.333,
+              [
+                124.8,
+                196.8,
+                366.1,
+                408.0
+              ]
+            ],
+            [
+              1.6,
+              [
+                124.8,
+                196.8,
+                366.1,
+                408.0
+              ]
+            ],
+            [
+              1.867,
+              [
+                124.8,
+                196.8,
+                366.1,
+                408.0
+              ]
+            ],
+            [
+              2.133,
+              [
+                124.8,
+                196.8,
+                366.1,
+                408.0
+              ]
+            ]
+          ],
+          "stationary": false
+        }
+      }
+    ],
+    "regions": [],
+    "video": {
+      "duration_seconds": 2.2,
+      "fps": 15.0,
+      "frame_count": 33,
+      "width": 832,
+      "height": 480
+    },
+    "timeline": [
+      {
+        "event_id": "t_01",
+        "verb": "move",
+        "participants": [
+          "object_01"
+        ],
+        "window": [
+          0.0,
+          0.8
+        ],
+        "name": "行人移动",
+        "conditions": [],
+        "text": "行人在 [0, 0.8] 秒出现,判定为移动"
+      }
+    ]
+  },
+  "dependency": {
+    "status": "ok",
+    "instruction": "删除行人。",
+    "direct_edits": [
+      {
+        "op_id": "op_01",
+        "action": "delete",
+        "object_id": "object_01",
+        "scope": {
+          "kind": "all"
+        },
+        "quote": "删除行人"
+      }
+    ],
+    "events": [],
+    "preserve": {
+      "object_behavior_ids": [],
+      "target_identity": true,
+      "background": true
+    },
+    "edit_order": [
+      {
+        "batch": 1,
+        "op_ids": [
+          "op_01"
+        ],
+        "repair_ids": [
+          "repair_01"
+        ],
+        "parallel": false,
+        "reason": "无前置依赖"
+      }
+    ],
+    "edit_passes": 1,
+    "affected_events": [
+      {
+        "event_id": "t_01",
+        "source_op_ids": [
+          "op_01"
+        ],
+        "relation": "same_object",
+        "judgment": "propagated",
+        "evidence": [
+          {
+            "op_id": "op_01",
+            "relation": "same_object",
+            "judgment": "propagated",
+            "reason": "对象被删除,其全部出现区间一并失效",
+            "window": [
+              0.0,
+              0.8
+            ]
+          }
+        ],
+        "note": "",
+        "decided_by": "rule"
+      }
+    ],
+    "repair_requirements": [
+      {
+        "repair_id": "repair_01",
+        "source_op_ids": [
+          "op_01"
+        ],
+        "requirement": "事件需按「delete」编辑后的状态重新检查",
+        "reason": "对象被删除,其全部出现区间一并失效",
+        "decision_owner": "planner",
+        "event_id": "t_01",
+        "object_id": "object_01",
+        "window": [
+          0.0,
+          0.8
+        ]
+      }
+    ],
+    "conflicts": [],
+    "uncertainties": [],
+    "warnings": [],
+    "provenance": {
+      "direct_edits": "llm_extraction",
+      "edit_order": "rule:topological",
+      "repair_requirements": "rule:propagation",
+      "direct_edits.op_01": "llm_extraction",
+      "affected_events.t_01": "rule"
+    }
+  },
+  "plan": {
+    "status": "ok",
+    "passes": [
+      {
+        "pass_no": 1,
+        "op_ids": [
+          "op_01"
+        ],
+        "scheduled": [
+          {
+            "ref": "t_01",
+            "kind": "event",
+            "start": 0.0,
+            "end": 0.8,
+            "note": ""
+          },
+          {
+            "ref": "op_01",
+            "kind": "op",
+            "start": 0.0,
+            "end": 2.2,
+            "note": ""
+          }
+        ],
+        "segments": [
+          {
+            "object_id": "object_01",
+            "start": 0.0,
+            "end": 0.8,
+            "spec_type": "delete_mask",
+            "params": {},
+            "source": "op_01"
+          }
+        ],
+        "keyframes": [],
+        "repair_resolutions": [
+          {
+            "repair_id": "repair_01",
+            "resolved_as": "covered_by_delete",
+            "detail": "该区间已并入 op_01 的删除覆盖,无需额外修复",
+            "segments": []
+          }
+        ]
+      }
+    ],
+    "edit_passes": 1,
+    "skipped_ops": [],
+    "escalated_conflicts": [],
+    "resolved_uncertainties": [],
+    "pending_uncertainties": [],
+    "violations": [],
+    "verification": [
+      {
+        "name": "windows_in_range",
+        "passed": true,
+        "detail": "排程均在视频范围内"
+      },
+      {
+        "name": "constraints_satisfied",
+        "passed": true,
+        "detail": "全部 after_end_of 约束成立"
+      },
+      {
+        "name": "preserve_intact",
+        "passed": true,
+        "detail": "保持对象()未被触及"
+      },
+      {
+        "name": "ops_covered",
+        "passed": true,
+        "detail": "已执行 ['op_01'] / 应执行 ['op_01'] / 重复 无"
+      },
+      {
+        "name": "repairs_resolved",
+        "passed": true,
+        "detail": "全部修复要求已落地"
+      },
+      {
+        "name": "uncertainties_handled",
+        "passed": true,
+        "detail": "已消解 0,挂起 0,上游共 0"
+      }
+    ],
+    "warnings": [],
+    "provenance": {
+      "edit_order": "dependency:edit_order",
+      "schedule": "rule:interval_propagation",
+      "spatial": "rule:path_planning_with_avoidance",
+      "repairs": "template:minimal_change",
+      "conflicts": "policy:skip_and_escalate",
+      "segments": "rule:affected_windows"
+    }
+  },
+  "jobs": {
+    "status": "ok",
+    "passes": [
+      {
+        "pass_no": 1,
+        "op_ids": [
+          "op_01"
+        ],
+        "jobs": [
+          {
+            "job_id": "job_1_1",
+            "source": "op_01",
+            "spec_type": "delete_mask",
+            "object_id": "object_01",
+            "object_name": "行人",
+            "frame_range": [
+              0,
+              12
+            ],
+            "mask": {
+              "shape": "rect",
+              "bbox": [
+                357.8,
+                182.4,
+                490.9,
+                417.6
+              ],
+              "trajectory": [
+                [
+                  0.0,
+                  [
+                    357.8,
+                    182.4,
+                    490.9,
+                    417.6
+                  ]
+                ],
+                [
+                  0.267,
+                  [
+                    280.1,
+                    187.2,
+                    449.3,
+                    414.4
+                  ]
+                ],
+                [
+                  0.533,
+                  [
+                    202.5,
+                    192.0,
+                    407.7,
+                    411.2
+                  ]
+                ],
+                [
+                  0.8,
+                  [
+                    124.8,
+                    196.8,
+                    366.1,
+                    408.0
+                  ]
+                ],
+                [
+                  1.067,
+                  [
+                    124.8,
+                    196.8,
+                    366.1,
+                    408.0
+                  ]
+                ],
+                [
+                  1.333,
+                  [
+                    124.8,
+                    196.8,
+                    366.1,
+                    408.0
+                  ]
+                ],
+                [
+                  1.6,
+                  [
+                    124.8,
+                    196.8,
+                    366.1,
+                    408.0
+                  ]
+                ],
+                [
+                  1.867,
+                  [
+                    124.8,
+                    196.8,
+                    366.1,
+                    408.0
+                  ]
+                ],
+                [
+                  2.133,
+                  [
+                    124.8,
+                    196.8,
+                    366.1,
+                    408.0
+                  ]
+                ]
+              ],
+              "frame_size": [
+                832,
+                480
+              ]
+            },
+            "prompt": "remove the pedestrian completely, keep everything else unchanged, high quality, consistent motion",
+            "vace_scale": 1.0
+          }
+        ]
+      }
+    ],
+    "warnings": []
+  },
+  "instruction": "删除行人。"
+}

@@ -68,12 +68,17 @@ class QwenVLClient:
         self.model = model or os.environ.get("QWEN_VL_MODEL") or DEFAULT_MODEL
         self.timeout = float(timeout or os.environ.get("QWEN_VL_TIMEOUT") or 60)
 
-    def chat(self, system: str, user: str) -> str:
+    def chat(self, system: str, user: str, images: Optional[list] = None) -> str:
+        """images: base64 JPEG 列表(多模态输入;省略则纯文本,向后兼容)。"""
+        content = [{"type": "image_url",
+                    "image_url": {"url": "data:image/jpeg;base64,%s" % b64}}
+                   for b64 in (images or [])]
+        content.append({"type": "text", "text": user})
         payload = json.dumps({
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": user},
+                {"role": "user", "content": content},
             ],
             "temperature": 0,
             "max_tokens": 2048,
@@ -97,8 +102,9 @@ class QwenVLClient:
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError("llm_bad_response", "应答缺少 choices[0].message.content:%s" % exc)
 
-    def complete_json(self, task: str, system: str, user: str) -> dict:
-        return _extract_json(self.chat(system, user))
+    def complete_json(self, task: str, system: str, user: str,
+                      images: Optional[list] = None) -> dict:
+        return _extract_json(self.chat(system, user, images))
 
 
 class MockQwenClient:
@@ -108,7 +114,8 @@ class MockQwenClient:
         self.handler = handler
         self.calls = []   # [(task, user_text), ...] 记录调用,便于断言
 
-    def complete_json(self, task: str, system: str, user: str) -> dict:
+    def complete_json(self, task: str, system: str, user: str,
+                      images: Optional[list] = None) -> dict:
         self.calls.append((task, user))
         result = self.handler(task, user)
         if not isinstance(result, dict):

@@ -1,10 +1,38 @@
 # Temporal_Editing_System
 
-视频时间/空间编辑系统。当前包含三个模块:
+视频时间/空间编辑系统。当前包含四个模块:
 
 - **用户指令解码器(基础版)** —— 读取用户指令与场景对象表,输出结构化编辑任务,供下游规划器消费。
 - **编辑依赖器** —— 一个修改会影响另一个事件或修改时,判断影响是否传播、传播到哪里、是否与其他要求冲突,并给出编辑先后顺序(最少遍数、最少返工)。
-- **时空规划器(Phase 1)** —— 把解析器 + 依赖器的结论展开为逐段编辑执行计划:时间排程、关键帧、编辑段、修复方案与验证结论;VACE 物化在 Phase 2。
+- **时空规划器(Phase 1 + 2)** —— 时间排程 + 空间避碰路径 + 最小改动修复 + VACE 物化与执行,已用 Wan2.1-VACE-1.3B 跑通真实端到端编辑。
+- **检测与跟踪** —— 真实视频 → 自动场景对象表 + timeline(开放词表检测 + 轻量跟踪 + 几何事件推导),替代人工构建。
+
+## 模块:detection_tracking
+
+**真实视频 → 场景对象表 + timeline**,补齐此前"人工构建场景"的缺口。流水线:
+
+1. **关键帧采样** → **Qwen3-VL-8B-Instruct 开放词表检测**:输入帧(base64)+ 对象
+   名单(中文即可),输出归一化 bbox + 置信度;无效名称/越界框/低信度在解析层过滤;
+2. **跟踪**(纯规则):同名关联、同帧多检取信度最高者、关键帧间线性插值 →
+   逐帧轨迹(`localization.trajectory`,执行器直接消费);最大速度 ≤ 帧宽 2%/秒
+   判定为静止;
+3. **几何事件推导**(纯规则):出现区间(move/stationary)、空间接触
+   (IoU>0.05 连续段 → `spatial_contact` 条件)、支撑关系(A 底边落在 B 上沿带内
+   → `supported_by` 条件);语义级事件(拿起/喝水)留待 Qwen3-VL 关系问答补充;
+4. **场景组装**:输出与 `scene_dependency_demo.json` 完全同构的 scene JSON,
+   直接喂给依赖器/规划器(离线闭环测试已验证)。
+
+```bash
+# CLI(需要 Qwen3-VL 端点,或 --mock-handler 离线)
+python3 -m detection_tracking --video examples/smoke_video.mp4 \
+  --objects "红球,蓝球" --out examples/scene_from_video.json
+
+# live 验证(对照合成视频已知真值):红球轨迹 IoU、蓝球静止、接触事件
+QWEN_VL_BASE_URL=http://127.0.0.1:8001/v1 python3 examples/detect_live.py
+```
+
+测试:`python3 tests/test_detection_tracking.py`(9 项离线:检测过滤/跟踪插值/
+静止判定/接触/支撑/缺失警告/闭环;检测应答由 Mock 按真值+噪声脚本化)。
 
 ## 模块:spatio_temporal_planner
 
@@ -37,8 +65,33 @@ python3 -m spatio_temporal_planner \
 python3 tests/test_planner.py
 ```
 
-底座模型 Wan2.1-VACE-1.3B 已下载到 `/cache/wuhan/Wan2.1-VACE-1.3B`(约 18 GB),
-Phase 2 物化适配器将消费 ExecutionPlan 的 segments/keyframes。
+底座模型 Wan2.1-VACE-1.3B 已下载到 `/cache/wuhan/Wan2.1-VACE-1.3B`(约 18 GB)。
+
+### Phase 2:空间规划 / VACE 物化 / 真实执行
+
+- **空间规划器**(spatial.py):直线优先,受阻时在禁区上/下余量更大的一侧加一对绕行点
+  (门形通道,避免斜线切角);可行 → 逐帧等速插值出关键帧并**就地消解**依赖器的
+  uncertain 项(附最小间隙证据);不可行 → 编辑跳过 + 升级反馈(冲突策略);
+  几何缺失 → 上报证据不足,不猜;
+- **物化适配器**(materialize.py):ExecutionPlan segments/keyframes → VACE 任务
+  (帧区间、mask 规格、英文 prompt);几何自动取自场景对象表,颜色/对象名做中英
+  映射;VACE 条件形式(`vace_video` + `vace_video_mask` + prompt)已在 diffsynth
+  源码确认;
+- **执行器**(executor.py):本地权重直载(DiffSynth-Studio),逐帧 mask(轨迹关键帧
+  线性插值),推理后做**像素级合成** —— 保持区直接用原帧、仅编辑区用生成结果、
+  边界羽化 —— "保持不变"从概率性变为确定性;重依赖惰性导入。
+
+端到端冒烟(合成视频「删除红球」,832×480×33 帧):
+
+```bash
+python3 examples/make_smoke_video.py              # 合成视频 + 几何对齐场景表
+CUDA_VISIBLE_DEVICES=0 python3 examples/vace_smoke.py   # 真实 VACE 推理 → smoke_edited.mp4
+```
+
+结果:红球区域红色占比 0.5~0.8 → 0.02~0.04(基本完全移除);蓝球(保持对象)在
+无重叠区 100% 保持。两轮质量修复后达成:mask 轨迹插值、prompt 英化、
+vace_scale=1.0、像素合成。已知局限:VACE 无原生轨迹条件,repath/arrive 的运动
+编辑以关键帧 mask 序列 + prompt 引导。
 
 ## 模块:instruction_parser
 

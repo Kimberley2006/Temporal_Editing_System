@@ -191,19 +191,88 @@ def test_repair_covered_by_delete():
     assert res[0]["resolved_as"] == "recheck_in_pass"
 
 
-def test_repath_uncertainty_pending():
-    """repath 的空间求解挂起 Phase 2,不确定项显式登记不丢失。"""
+def test_repath_resolved_with_avoidance():
+    """repath 由空间规划器求解:绕开保持对象,不确定项消解并留证据。"""
     out = dep_ok(
         [op("op_01", "repath", object_id="object_01", quote="让红球换条路径")],
         uncertainties=[{"uncertainty_id": "u_01", "subject": "op_01 × t_05",
                         "question": "编辑「让红球换条路径」对事件 t_05 的影响待定",
                         "missing_evidence": ["新路径由规划器决定"]}])
+    out["preserve"] = {"object_behavior_ids": ["object_02"],
+                       "target_identity": True, "background": True}
     plan = PLANNER.plan(dependency_output=out, scene=SCENE)
     assert plan["status"] == "ok"
-    assert any(s["spec_type"] == "spatial_pending"
+    # 不确定项被空间求解消解,带最小间隙证据
+    assert plan["resolved_uncertainties"]
+    assert "最小间隙" in plan["resolved_uncertainties"][0]["resolution"]
+    assert plan["pending_uncertainties"] == []
+    # 关键帧给出实际轨迹(绕行在蓝球下方),编辑段为 new_motion
+    kfs = plan["passes"][0]["keyframes"]
+    assert kfs and all(k["bbox"] for k in kfs)
+    ys = [k["bbox"][1] + k["bbox"][3] / 2 for k in kfs]
+    assert max(ys) > 300            # 绕行一侧在蓝球禁区下方
+    assert any(s["spec_type"] == "new_motion"
                for p in plan["passes"] for s in p["segments"])
-    assert plan["pending_uncertainties"] and "Phase 2" in plan["pending_uncertainties"][0]["handling"]
-    assert check_map(plan)["uncertainties_handled"] is True
+    assert all(check_map(plan).values())
+
+
+def test_repath_infeasible_skipped_and_escalated():
+    """路径不可行(禁区横跨全宽):编辑被跳过并升级反馈,不产出半套计划。"""
+    blocked_scene = {"objects": [
+        {"id": "object_01", "name": "红球",
+         "localization": {"bbox": [300, 220, 56, 56]}},
+        {"id": "object_02", "name": "蓝球",
+         "localization": {"bbox": [0, 200, 832, 100]}}],
+        "regions": [], "video": {"duration_seconds": 15.0, "fps": 16,
+                                 "width": 832, "height": 480}}
+    out = dep_ok(
+        [op("op_01", "repath", object_id="object_01", quote="让红球换条路径")],
+        uncertainties=[{"uncertainty_id": "u_01", "subject": "op_01 × t_05",
+                        "question": "影响待定", "missing_evidence": ["新路径"]}])
+    out["preserve"] = {"object_behavior_ids": ["object_02"],
+                       "target_identity": True, "background": True}
+    plan = PLANNER.plan(dependency_output=out, scene=blocked_scene)
+    assert plan["status"] == "ok"
+    assert [o["op_id"] for o in plan["skipped_ops"]] == ["op_01"]
+    assert plan["edit_passes"] == 0
+    kinds = {e["kind"] for e in plan["escalated_conflicts"]}
+    assert "spatial_infeasible" in kinds
+    assert any("建议" in e["user_feedback"] for e in plan["escalated_conflicts"])
+
+
+def test_spatial_detour_and_infeasible():
+    """空间求解器单元:直行/门形绕行/不可行三种结果。"""
+    from spatio_temporal_planner.spatial import plan_path
+    assert plan_path((120, 200, 56, 56), (660, 120, 130, 110), [], (832, 480)).feasible
+    r = plan_path((120, 200, 56, 56), (660, 120, 130, 110),
+                  [(420, 196, 68, 68)], (832, 480))
+    assert r.feasible and len(r.waypoints) == 4    # 门形绕行:起 + 两绕行点 + 终
+    assert r.min_clearance > 0
+    assert not plan_path((300, 220, 56, 56), (500, 220, 56, 56),
+                         [(0, 200, 832, 100)], (832, 480)).feasible
+
+
+def test_materialize_vace_jobs():
+    """物化适配器:执行计划 → VACE 任务(帧区间/mask/prompt 对齐)。"""
+    from spatio_temporal_planner.materialize import build_vace_jobs
+    dep = DEP.analyze("删除桌子。", SCENE)
+    plan = PLANNER.plan(dependency_output=dep, scene=SCENE)
+    jobs_out = build_vace_jobs(plan, SCENE, (832, 480), 16)
+    assert jobs_out["status"] == "ok"
+    jobs = jobs_out["passes"][0]["jobs"]
+    assert jobs, "删除桌子应物化出至少一个任务"
+    j = jobs[0]
+    assert j["spec_type"] in ("delete_mask", "hold_position")
+    assert j["mask"] and j["mask"]["bbox"]
+    assert "remove" in j["prompt"] or "stays" in j["prompt"]
+    f0, f1 = j["frame_range"]
+    assert 0 <= f0 < f1 <= 240
+
+    dep7 = DEP.analyze("红球停留 1 秒，远处汽车变成蓝色。", SCENE)
+    plan7 = PLANNER.plan(dependency_output=dep7, scene=SCENE)
+    jobs7 = build_vace_jobs(plan7, SCENE, (832, 480), 16)["passes"][0]["jobs"]
+    recolors = [x for x in jobs7 if x["spec_type"] == "recolor_mask"]
+    assert recolors and "blue" in recolors[0]["prompt"]
 
 
 def test_upstream_not_ok_rejected():
