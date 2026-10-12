@@ -1,0 +1,80 @@
+{
+  "objects": [
+    {"id": "object_01", "name": "红球", "aliases": ["红色球"]},
+    {"id": "object_02", "name": "蓝球", "aliases": ["蓝色球"]},
+    {"id": "object_03", "name": "杯子", "aliases": ["水杯", "玻璃杯"]},
+    {"id": "object_04", "name": "桌子", "aliases": ["桌面"]},
+    {"id": "object_05", "name": "行人", "aliases": ["人"]},
+    {"id": "object_06", "name": "汽车", "aliases": ["远处的汽车"]}
+  ],
+  "regions": [
+    {"id": "region_01", "name": "蓝色区域", "aliases": ["蓝区"]}
+  ],
+  "video": {"duration_seconds": 15.0, "fps": 16, "frame_count": 240},
+  "timeline": [
+    {
+      "event_id": "t_01", "verb": "rest_on", "participants": ["object_03", "object_04"],
+      "window": [0.0, 8.0], "name": "杯子放在桌上",
+      "conditions": [{"kind": "supported_by", "refs": ["object_04"]}],
+      "text": "杯子放在桌面上"
+    },
+    {
+      "event_id": "t_02", "verb": "pick_up", "participants": ["object_05", "object_03"],
+      "window": [8.0, 9.0], "name": "人拿起杯子",
+      "conditions": [{"kind": "requires_present", "refs": ["object_03"]}],
+      "text": "人拿起杯子"
+    },
+    {
+      "event_id": "t_03", "verb": "drink", "participants": ["object_05", "object_03"],
+      "window": [9.0, 11.0], "name": "人用杯子喝水",
+      "conditions": [
+        {"kind": "requires_present", "refs": ["object_03"]},
+        {"kind": "after_end_of", "refs": ["t_02"]}
+      ],
+      "text": "人用杯子喝水"
+    },
+    {
+      "event_id": "t_04", "verb": "walk_holding", "participants": ["object_05", "object_03"],
+      "window": [9.0, 13.0], "name": "人持杯行走",
+      "conditions": [{"kind": "held_by", "refs": ["object_03"]}],
+      "text": "人拿着杯子行走"
+    },
+    {
+      "event_id": "t_05", "verb": "collide", "participants": ["object_01", "object_02"],
+      "window": [4.0, 5.0], "name": "红球与蓝球碰撞",
+      "conditions": [{"kind": "spatial_contact", "refs": ["object_01", "object_02"]}],
+      "text": "红球与蓝球发生碰撞"
+    },
+    {
+      "event_id": "t_06", "verb": "roll", "participants": ["object_01"],
+      "window": [0.0, 6.0], "name": "红球滚动", "conditions": [],
+      "text": "红球从左向右滚动"
+    },
+    {
+      "event_id": "t_07", "verb": "stationary", "participants": ["object_02"],
+      "window": [0.0, 15.0], "name": "蓝球静止", "conditions": [],
+      "text": "蓝球全程保持静止"
+    },
+    {
+      "event_id": "t_08", "verb": "drive", "participants": ["object_06"],
+      "window": [10.0, 15.0], "name": "汽车驶过", "conditions": [],
+      "text": "远处的汽车驶过画面"
+    },
+    {
+      "event_id": "t_09", "verb": "walk", "participants": ["object_05"],
+      "window": [2.0, 5.0], "name": "A", "conditions": [],
+      "text": "事件 A:人走到门口"
+    },
+    {
+      "event_id": "t_10", "verb": "wave", "participants": ["object_05"],
+      "window": [5.0, 7.0], "name": "B",
+      "conditions": [{"kind": "after_end_of", "refs": ["t_09"]}],
+      "text": "事件 B:人挥手,必须在 A 结束后开始"
+    },
+    {
+      "event_id": "t_11", "verb": "put_down", "participants": ["object_05", "object_03"],
+      "window": null, "name": "人放下杯子", "conditions": [],
+      "text": "人把杯子放回桌上(检测模块未给出时间窗)"
+    }
+  ]
+}
